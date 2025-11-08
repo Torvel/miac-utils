@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+
+  jira:
+    image: atlassian/jira-software:9.15.0
+    container_name: jira
+    ports:
+      - "8080:8080"
+    volumes:
+      - jira_data:/var/atlassian/application-data/jira
+    networks:
+      - jira-net
+    restart: unless-stopped
+
+  n8n:
+    # Recomendado: fijar usuario y contraseña por defecto. admin@miacs.com
+    # Para conectar a servicios de la máquina host, como por ejemplo Ollama, tendremos
+    # que hacerlo con: http://host.docker.internal:11434o
+    image: n8nio/n8n:1.118.2
+    container_name: n8n-minisoc
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - TZ=Europe/Madrid
+      - N8N_BASIC_AUTH_ACTIVE=false
+
+      # Persistencia (SQLite)
+      - DB_TYPE=sqlite
+      - DB_SQLITE_PATH=/home/node/.n8n/database.sqlite
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./logs:/data/logs   # /Carpeta local "logs" accesible dentro del contenedor
+
+    # Esto permite acceder desde dentro del contenedor al host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    networks:
+      - jira-net
+    user: "1000:1000"
+
+networks:
+  jira-net:
+
+volumes:
+  jira_data:
+  n8n_data:
